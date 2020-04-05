@@ -38,7 +38,7 @@ public:
             _threadCountDownload(std::thread::hardware_concurrency()),
             _threadCountParse(std::thread::hardware_concurrency()) {}
 
-    explicit crawler(std::size_t nestingVar, 
+    explicit crawler(std::size_t nestingVar,
     std::size_t download, std::size_t parser) :
             _nestingVar(nestingVar),
             _threadCountDownload(download),

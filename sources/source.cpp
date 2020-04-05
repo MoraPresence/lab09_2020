@@ -43,7 +43,7 @@ void crawler::nesting(std::list<std::string> currentList) {
     for (auto &th : threads) {
         th.join();
     }
-    std::cout << "Level: " << getNestingCounter() 
+    std::cout << "Level: " << getNestingCounter()
          << " links ready" << std::endl;
     setCounter(1);
     std::list<std::string> linksToNesting = makeLinksList(tmp);
@@ -125,7 +125,7 @@ std::string crawler::getHttps(std::smatch &mr) {
             throw boost::system::system_error{ec};
         }
         auto const results = resolver.resolve(host, port);
-        boost::asio::connect(stream.next_layer(), results.begin(), 
+        boost::asio::connect(stream.next_layer(), results.begin(),
         results.end());
         stream.handshake(ssl::stream_base::client);
         http::request<http::string_body> req{http::verb::get, target, version};
@@ -148,19 +148,19 @@ std::list<std::string> crawler::makeLinksList
     std::vector<std::thread> threads;
     threads.reserve(_threadCountParse);
     for (size_t i = 0; i < _threadCountParse; ++i) {
-        threads.emplace_back(std::thread(&crawler::parser, 
+        threads.emplace_back(std::thread(&crawler::parser,
         this, &listBuf, &linksList));
     }
     for (auto &th : threads) {
         th.join();
     }
     unique(linksList);
-    std::cout << "Level: " << getNestingCounter() - 1 
+    std::cout << "Level: " << getNestingCounter() - 1
               << " links on image ready" << std::endl;
     return linksList;
 }
 
-void crawler::parser(std::list<std::string> *listBuf, 
+void crawler::parser(std::list<std::string> *listBuf,
 std::list<std::string> *linksList) {
     while (!listBuf->empty()) {
         _mutex.lock();
@@ -198,20 +198,20 @@ std::list<std::string> *linksList) {
                     qn.push(static_cast<GumboNode *>(children->data[i]));
                 }
             }
-
         }
         gumbo_destroy_output(&kGumboDefaultOptions, output);
         _mutex.unlock();
     }
 }
 
-void crawler::elementADD(std::list<std::string> &rx, std::list<std::string> &tx) {
+void crawler::elementADD(std::list<std::string> &rx,
+ std::list<std::string> &tx) {
     for (auto it = tx.begin(); it != tx.end(); ++it) {
         rx.push_back(*it);
     }
 }
 
-void crawler::elementADD(std::queue<std::shared_ptr<std::string>> &rx, 
+void crawler::elementADD(std::queue<std::shared_ptr<std::string>> &rx,
 std::list<std::string> &tx) {
     for (auto it = tx.begin(); it != tx.end(); ++it) {
         rx.push(std::make_shared<std::string>(*it));
