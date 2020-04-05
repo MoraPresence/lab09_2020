@@ -1,49 +1,72 @@
 // Copyright 2018 Your Name <your_email>
 
 #include <header.hpp>
+
+#include "main.h"
+
 int main() {
-    crawler cr;
-    std::list<std::string> *uniqueList = new std::list<std::string>();
-    std::list<std::string> *uniqueList2 = new std::list<std::string>();
-    uniqueList->push_back("bla1");
-    uniqueList->push_back("bla2");
-    uniqueList->push_back("bla3");
+    std::string adrHTML;
+    std::size_t nestingVar;
+    std::size_t threadDownload;
+    std::size_t threadParser;
+    std::string pathToFile;
 
-    for (std::string i : *uniqueList) {
-        std::cout << i << std::endl;
-    }
-    cr.listElementADD(*uniqueList2, *uniqueList);
-    for (std::string i : *uniqueList2) {
-        std::cout << i;
-    }
+    std::cout << "Link HTML-page: ";
+    std::cin >> adrHTML;
 
+    std::cout << "Nesting lvl: ";
+    std::cin >> nestingVar;
+
+    std::cout << "Threads for download: ";
+    std::cin >> threadDownload;
+
+    std::cout << "Threads for parsing: ";
+    std::cin >> threadParser;
+
+    std::cout << "Path to file: ";
+    std::cin >> pathToFile;
+
+    crawler crawler(nestingVar, threadDownload, threadParser);
     std::list<std::string> tmp;
-    tmp.push_back("https://yandex.ru/");
-    std::ofstream ofs{"/home/mora/Desktop/out.txt"}; // запись html-страницы в файл
-    cr.nesting(tmp);
-    cr._arrayList.sort();
-    cr._arrayList.unique();
-    for (std::string i : cr._arrayList) {
-        ofs << i << std::endl;
-    }
-    ofs.close();
+    tmp.push_back(adrHTML);
+    crawler.nesting(tmp);
+    crawler.writeToFile(std::move(pathToFile));
+    return 0;
 }
 
-void crawler::nesting(std::list<std::string> &currentList) {
+void crawler::nesting(std::list<std::string> currentList) {
     std::list<std::string> tmp;
-    for (auto it = currentList.begin(); it != currentList.end(); ++it) {
-        tmp.merge(getLinks(*it));
+    std::vector<std::thread> threads;
+    threads.reserve(_threadCountDownload);
+    for (size_t i = 0; i < _threadCountDownload; ++i) {
+        threads.emplace_back(std::thread(&crawler::downloader, this, &currentList, &tmp));
     }
+    for (auto &th : threads) {
+
+        th.join();
+    }
+    std::cout << "Level: " << getNestingCounter() << " links ready" << std::endl;
     setCounter(1);
-    tmp.sort();
-    tmp.unique();
-    this->listElementADD(_arrayList, tmp);
+    std::list<std::string> linksToNesting = makeLinksList(tmp);
     if (getNestingCounter() <= getNestingVar()) {
-        nesting(tmp);
+        nesting(linksToNesting);
     }
 }
 
-std::list<std::string> crawler::getLinks(std::string &sUri) {
+void crawler::downloader(std::list<std::string> *currentList, std::list<std::string> *tmp) {
+    while (!currentList->empty()) {
+        _mutex.lock();
+        if (currentList->empty()) {
+            _mutex.unlock();
+            continue;
+        }
+        tmp->push_back(getHTML(currentList->front()));
+        currentList->pop_front();
+        _mutex.unlock();
+    }
+}
+
+std::string crawler::getHTML(std::string &sUri) {
     std::regex rUri{"^(?:(https?)://)?([^/]+)(/.*)?"};
     std::string sBody;
     std::smatch mr;
@@ -61,10 +84,7 @@ std::list<std::string> crawler::getLinks(std::string &sUri) {
     } else if (mr[1].str() == "http") {
         sBody = getHttp(mr);
     }
-
-
-    return makeLinksList(sBody);
-
+    return sBody;
 }
 
 std::string crawler::getHttp(std::smatch &mr) {
@@ -121,63 +141,86 @@ std::string crawler::getHttps(std::smatch &mr) {
 
 }
 
-std::list<std::string> crawler::makeLinksList(std::string &buf) {
+std::list<std::string> crawler::makeLinksList(std::list<std::string> &listBuf) {
     std::list<std::string> linksList;
-
-    GumboOutput *output = gumbo_parse(buf.c_str());
-
-    std::queue<GumboNode *> qn;
-    qn.push(output->root);
-
-    while (!qn.empty()) {
-        GumboNode *node = qn.front();
-        qn.pop();
-
-        if (GUMBO_NODE_ELEMENT == node->type) {
-            GumboAttribute *href = nullptr;
-            if (node->v.element.tag == GUMBO_TAG_A &&
-                (href = gumbo_get_attribute(&node->v.element.attributes, "href"))) {
-                if (std::string(href->value).find("http") == 0)
-                    linksList.push_back(href->value);
-            }
-
-            GumboVector *children = &node->v.element.children;
-            for (unsigned int i = 0; i < children->length; ++i) {
-                qn.push(static_cast<GumboNode *>(children->data[i]));
-            }
-        }
+    std::vector<std::thread> threads;
+    threads.reserve(_threadCountParse);
+    for (size_t i = 0; i < _threadCountParse; ++i) {
+        threads.emplace_back(std::thread(&crawler::parser, this, &listBuf, &linksList));
     }
-    gumbo_destroy_output(&kGumboDefaultOptions, output);
-    linksList.sort();
-    linksList.unique();
+    for (auto &th : threads) {
+        th.join();
+    }
+    unique(linksList);
+    std::cout << "Level: " << getNestingCounter() - 1 << " links on image ready" << std::endl;
     return linksList;
 }
 
-void crawler::listElementADD(std::list<std::string> &rx, std::list<std::string> &tx) {
+void crawler::parser(std::list<std::string> *listBuf, std::list<std::string> *linksList) {
+    while (!listBuf->empty()) {
+        _mutex.lock();
+        if (listBuf->empty()) {
+            _mutex.unlock();
+            continue;
+        }
+        std::string buf = listBuf->front();
+        listBuf->pop_front();
+        GumboOutput *output = gumbo_parse(buf.c_str());
+
+        std::queue<GumboNode *> qn;
+        qn.push(output->root);
+
+        while (!qn.empty()) {
+            GumboNode *node = qn.front();
+            qn.pop();
+            if (GUMBO_NODE_ELEMENT == node->type) {
+                GumboAttribute *href = nullptr;
+                if (node->v.element.tag == GUMBO_TAG_A &&
+                    (href = gumbo_get_attribute(&node->v.element.attributes, "href"))) {
+                    if (std::string(href->value).find("http") == 0)
+                        linksList->push_back(href->value);
+                }
+                if (node->v.element.tag == GUMBO_TAG_IMG &&
+                    (href = gumbo_get_attribute(&node->v.element.attributes, "src"))) {
+                    if (std::string(href->value).find("http") == 0)
+                        _arrayList.push_back(href->value);
+                }
+
+                GumboVector *children = &node->v.element.children;
+                for (unsigned int i = 0; i < children->length; ++i) {
+                    qn.push(static_cast<GumboNode *>(children->data[i]));
+                }
+            }
+
+        }
+        gumbo_destroy_output(&kGumboDefaultOptions, output);
+        _mutex.unlock();
+    }
+}
+
+void crawler::elementADD(std::list<std::string> &rx, std::list<std::string> &tx) {
     for (auto it = tx.begin(); it != tx.end(); ++it) {
         rx.push_back(*it);
     }
 }
 
-void crawler::startThreadsDownload(std::list<std::string> &currentList) {
-    setLinkList(currentList);
-    if (_threadCountDownload >= 1 && _threadCountDownload
-                                     <= std::thread::hardware_concurrency()) {
-        std::vector<std::thread> threads;
-        threads.reserve(_threadCountDownload);
-        for (size_t i = 0; i < _threadCountDownload; ++i) {
-            threads.emplace_back();
-        }
-        for (auto &th : threads) {
-            th.join();
-        }
-    } else {
-        return;
+void crawler::elementADD(std::queue<std::shared_ptr<std::string>> &rx, std::list<std::string> &tx) {
+    for (auto it = tx.begin(); it != tx.end(); ++it) {
+        rx.push(std::make_shared<std::string>(*it));
     }
-
 }
 
-void crawler::downloader() {
+void crawler::unique(std::list<std::string> &list) {
+    list.sort();
+    list.unique();
+}
 
+void crawler::writeToFile(std::string &&path) {
+    unique(this->_arrayList);
+    std::ofstream ofs{path};
+    for (std::string i : this->_arrayList) {
+        ofs << i << std::endl;
+    }
+    ofs.close();
 }
 

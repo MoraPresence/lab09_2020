@@ -21,70 +21,70 @@
 #include "root_certificates.hpp"
 #include <queue>
 #include <regex>
-#include <list>
-#include <mutex>
-#include <gumbo.h>
-#include <boost/beast.hpp>
-#include <iostream>
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/ssl/error.hpp>
-#include <boost/asio/ssl/stream.hpp>
-#include <cstdlib>
-#include <iostream>
-#include <string>
-#include <fstream>
-#include "root_certificates.hpp"
-#include <queue>
-#include <regex>
 #include <thread>
+
 
 using tcp = boost::asio::ip::tcp;
 namespace ssl = boost::asio::ssl;
 namespace http = boost::beast::http;
 
-class crawler{
+class crawler {
 public:
-    std::list<std::string> getLinks(std::string&);
+    crawler() :
+            _threadCountDownload(std::thread::hardware_concurrency()),
+            _threadCountParse(std::thread::hardware_concurrency()) {};
 
-    void nesting(std::list<std::string>&);
+    explicit crawler(std::size_t nestingVar) :
+            _nestingVar(nestingVar),
+            _threadCountDownload(std::thread::hardware_concurrency()),
+            _threadCountParse(std::thread::hardware_concurrency()) {};
 
-    std::string getHttp(std::smatch&);
+    explicit crawler(std::size_t nestingVar, std::size_t download, std::size_t parser) :
+            _nestingVar(nestingVar),
+            _threadCountDownload(download),
+            _threadCountParse(parser) {};
 
-    std::string getHttps(std::smatch&);
+    void nesting(std::list<std::string>);
 
-    std::list<std::string> makeLinksList(std::string&);
+    void writeToFile(std::string &&);
 
-    void startThreadsDownload(std::list<std::string> &);
+private:
+    std::string getHTML(std::string &);
 
-    void downloader();
+    std::string getHttp(std::smatch &);
 
-    void setCounter(unsigned i){
-        _nestingCounter+=i;
+    std::string getHttps(std::smatch &);
+
+    std::list<std::string> makeLinksList(std::list<std::string> &);
+
+    void unique(std::list<std::string> &);
+
+    void downloader(std::list<std::string> *, std::list<std::string> *);
+
+    void parser(std::list<std::string> *, std::list<std::string> *);
+
+    void setCounter(unsigned i) {
+        _nestingCounter += i;
     }
-    void setLinkList(std::list<std::string> list){
-        listElementADD(_linkList, list);
-    }
-    unsigned getNestingVar(){
+
+    unsigned getNestingVar() {
         return _nestingVar;
     }
 
-    unsigned getNestingCounter(){
+    unsigned getNestingCounter() {
         return _nestingCounter;
     }
 
-    void listElementADD(std::list<std::string>&, std::list<std::string>&);
+    void elementADD(std::list<std::string> &, std::list<std::string> &);
 
-//private:
-unsigned _nestingVar = 1;
-std::atomic_uint _nestingCounter = 0;
-unsigned _threadsCount = 0;
-std::size_t _threadCountDownload = std::thread::hardware_concurrency();
-std::list<std::string> _arrayList;
-std::list<std::string> _linkList;
+    void elementADD(std::queue<std::shared_ptr<std::string>> &, std::list<std::string> &);
+
+    std::size_t _nestingVar = 1;
+    std::atomic_uint _nestingCounter = 0;
+    std::size_t _threadCountDownload;
+    std::size_t _threadCountParse;
+    std::list<std::string> _arrayList;
+    std::mutex _mutex;
 };
 #endif // INCLUDE_HEADER_HPP_
 
