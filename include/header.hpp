@@ -15,7 +15,6 @@
 #include <boost/asio/ssl/error.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <cstdlib>
-#include <iostream>
 #include <string>
 #include <fstream>
 #include "root_certificates.hpp"
@@ -32,17 +31,18 @@ class crawler {
 public:
     crawler() :
             _threadCountDownload(std::thread::hardware_concurrency()),
-            _threadCountParse(std::thread::hardware_concurrency()) {};
+            _threadCountParse(std::thread::hardware_concurrency()) {}
 
     explicit crawler(std::size_t nestingVar) :
             _nestingVar(nestingVar),
             _threadCountDownload(std::thread::hardware_concurrency()),
-            _threadCountParse(std::thread::hardware_concurrency()) {};
+            _threadCountParse(std::thread::hardware_concurrency()) {}
 
-    explicit crawler(std::size_t nestingVar, std::size_t download, std::size_t parser) :
+    explicit crawler(std::size_t nestingVar, 
+    std::size_t download, std::size_t parser) :
             _nestingVar(nestingVar),
             _threadCountDownload(download),
-            _threadCountParse(parser) {};
+            _threadCountParse(parser) {}
 
     void nesting(std::list<std::string>);
 
@@ -77,7 +77,8 @@ private:
 
     void elementADD(std::list<std::string> &, std::list<std::string> &);
 
-    void elementADD(std::queue<std::shared_ptr<std::string>> &, std::list<std::string> &);
+    void elementADD(std::queue<std::shared_ptr<std::string>> &,
+     std::list<std::string> &);
 
     std::size_t _nestingVar = 1;
     std::atomic_uint _nestingCounter = 0;

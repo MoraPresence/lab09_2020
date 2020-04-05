@@ -2,8 +2,6 @@
 
 #include <header.hpp>
 
-#include "main.h"
-
 int main() {
     std::string adrHTML;
     std::size_t nestingVar;
@@ -39,13 +37,14 @@ void crawler::nesting(std::list<std::string> currentList) {
     std::vector<std::thread> threads;
     threads.reserve(_threadCountDownload);
     for (size_t i = 0; i < _threadCountDownload; ++i) {
-        threads.emplace_back(std::thread(&crawler::downloader, this, &currentList, &tmp));
+        threads.emplace_back(std::thread
+        (&crawler::downloader, this, &currentList, &tmp));
     }
     for (auto &th : threads) {
-
         th.join();
     }
-    std::cout << "Level: " << getNestingCounter() << " links ready" << std::endl;
+    std::cout << "Level: " << getNestingCounter() 
+         << " links ready" << std::endl;
     setCounter(1);
     std::list<std::string> linksToNesting = makeLinksList(tmp);
     if (getNestingCounter() <= getNestingVar()) {
@@ -53,7 +52,8 @@ void crawler::nesting(std::list<std::string> currentList) {
     }
 }
 
-void crawler::downloader(std::list<std::string> *currentList, std::list<std::string> *tmp) {
+void crawler::downloader(std::list<std::string> *currentList,
+ std::list<std::string> *tmp) {
     while (!currentList->empty()) {
         _mutex.lock();
         if (currentList->empty()) {
@@ -120,11 +120,13 @@ std::string crawler::getHttps(std::smatch &mr) {
         tcp::resolver resolver{ioc};
         ssl::stream<tcp::socket> stream{ioc, ctx};
         if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str())) {
-            boost::system::error_code ec{static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
+            boost::system::error_code ec{static_cast<int>(::ERR_get_error()),
+             boost::asio::error::get_ssl_category()};
             throw boost::system::system_error{ec};
         }
         auto const results = resolver.resolve(host, port);
-        boost::asio::connect(stream.next_layer(), results.begin(), results.end());
+        boost::asio::connect(stream.next_layer(), results.begin(), 
+        results.end());
         stream.handshake(ssl::stream_base::client);
         http::request<http::string_body> req{http::verb::get, target, version};
         req.set(http::field::host, host);
@@ -138,25 +140,28 @@ std::string crawler::getHttps(std::smatch &mr) {
         std::cout << "error";
         return "error";
     }
-
 }
 
-std::list<std::string> crawler::makeLinksList(std::list<std::string> &listBuf) {
+std::list<std::string> crawler::makeLinksList
+(std::list<std::string> &listBuf) {
     std::list<std::string> linksList;
     std::vector<std::thread> threads;
     threads.reserve(_threadCountParse);
     for (size_t i = 0; i < _threadCountParse; ++i) {
-        threads.emplace_back(std::thread(&crawler::parser, this, &listBuf, &linksList));
+        threads.emplace_back(std::thread(&crawler::parser, 
+        this, &listBuf, &linksList));
     }
     for (auto &th : threads) {
         th.join();
     }
     unique(linksList);
-    std::cout << "Level: " << getNestingCounter() - 1 << " links on image ready" << std::endl;
+    std::cout << "Level: " << getNestingCounter() - 1 
+              << " links on image ready" << std::endl;
     return linksList;
 }
 
-void crawler::parser(std::list<std::string> *listBuf, std::list<std::string> *linksList) {
+void crawler::parser(std::list<std::string> *listBuf, 
+std::list<std::string> *linksList) {
     while (!listBuf->empty()) {
         _mutex.lock();
         if (listBuf->empty()) {
@@ -176,12 +181,14 @@ void crawler::parser(std::list<std::string> *listBuf, std::list<std::string> *li
             if (GUMBO_NODE_ELEMENT == node->type) {
                 GumboAttribute *href = nullptr;
                 if (node->v.element.tag == GUMBO_TAG_A &&
-                    (href = gumbo_get_attribute(&node->v.element.attributes, "href"))) {
+                    (href = gumbo_get_attribute
+                    (&node->v.element.attributes, "href"))) {
                     if (std::string(href->value).find("http") == 0)
                         linksList->push_back(href->value);
                 }
                 if (node->v.element.tag == GUMBO_TAG_IMG &&
-                    (href = gumbo_get_attribute(&node->v.element.attributes, "src"))) {
+                    (href = gumbo_get_attribute
+                    (&node->v.element.attributes, "src"))) {
                     if (std::string(href->value).find("http") == 0)
                         _arrayList.push_back(href->value);
                 }
@@ -204,7 +211,8 @@ void crawler::elementADD(std::list<std::string> &rx, std::list<std::string> &tx)
     }
 }
 
-void crawler::elementADD(std::queue<std::shared_ptr<std::string>> &rx, std::list<std::string> &tx) {
+void crawler::elementADD(std::queue<std::shared_ptr<std::string>> &rx, 
+std::list<std::string> &tx) {
     for (auto it = tx.begin(); it != tx.end(); ++it) {
         rx.push(std::make_shared<std::string>(*it));
     }
