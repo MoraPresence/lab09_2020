@@ -72,7 +72,7 @@ std::string crawler::getHTML(std::string &sUri) {
     std::smatch mr;
     if (std::regex_match(sUri, mr, rUri)) {
         for (auto const &sm : mr) {
-            //std::cout << sm << std::endl;
+            std::cout << sm << std::endl;
         }
     } else {
         std::cerr << "std::regex_match failed: " + sUri << "\n\n";
