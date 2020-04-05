@@ -46,9 +46,7 @@ add_executable(
 target_link_libraries(
   ${PROJECT_NAME}
   gumbo::gumbo
-  Boost::program_options
   Boost::thread
-  Boost::filesystem
   OpenSSL::SSL
 )
 
