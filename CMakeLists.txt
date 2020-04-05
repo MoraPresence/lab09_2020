@@ -27,19 +27,12 @@ find_package(gumbo CONFIG REQUIRED)
 hunter_add_package(
   Boost
   COMPONENTS
-  program_options
   thread
-  log
-  filesystem
 )
 find_package(
   Boost
   CONFIG REQUIRED
-  program_options
   thread
-  log
-  log_setup
-  filesystem
 )
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
@@ -64,6 +57,17 @@ target_include_directories(
   PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+enable_testing()
+add_test(NAME unit_tests COMMAND tests)
+
+if(BUILD_COVERAGE)
+  set(ENABLE_COVERAGE ON CACHE BOOL "Enable coverage build." FORCE)
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+  find_package(codecov)
+  # TODO: change template word to project name and delete this comment
+  add_coverage(template)
+  add_coverage(tests)
   list(APPEND LCOV_REMOVE_PATTERNS "'${PROJECT_SOURCE_DIR}/tests/*'")
   coverage_evaluate()
 endif()
