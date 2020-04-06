@@ -48,6 +48,8 @@ add_executable(
   ${CMAKE_CURRENT_SOURCE_DIR}/sources/source.cpp
 )
 
+target_link_libraries(tests GTest::main ${PROJECT_NAME})
+
 target_link_libraries(
   ${PROJECT_NAME}
   gumbo::gumbo
@@ -61,7 +63,6 @@ target_include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-
 add_executable(tests
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp
         )
@@ -69,9 +70,6 @@ add_executable(tests
 target_include_directories(tests
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
         )
-
-target_link_libraries(tests GTest::main ${PROJECT_NAME})
-
 
 enable_testing()
 add_test(NAME unit_tests COMMAND tests)
