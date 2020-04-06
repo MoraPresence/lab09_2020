@@ -63,6 +63,9 @@ target_include_directories(
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
         
 
+target_link_libraries(header INTERFACE Boost::thread gumbo::gumbo OpenSSL::SSL)
+
+
 enable_testing()
 add_test(NAME unit_tests COMMAND tests)
 
