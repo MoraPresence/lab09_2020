@@ -26,42 +26,42 @@ string(APPEND CMAKE_CXX_FLAGS " -Wshadow -Wnon-virtual-dtor")
 
 hunter_add_package(GTest)
 find_package(GTest CONFIG REQUIRED)
-
 hunter_add_package(gumbo)
 find_package(gumbo CONFIG REQUIRED)
-hunter_add_package(
-  Boost
-  COMPONENTS
-  thread
-)
-find_package(
-  Boost
-  CONFIG REQUIRED
-  thread
-)
+hunter_add_package(Boost COMPONENTS  thread)
+find_package(Boost CONFIG REQUIRED thread)
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
 find_package(Threads)
 
-add_executable(
-  ${PROJECT_NAME}
-  ${CMAKE_CURRENT_SOURCE_DIR}/sources/source.cpp
-)
 
-target_link_libraries(
-  ${PROJECT_NAME}
-  gumbo::gumbo
-  Boost::thread
-  OpenSSL::SSL
-)
+add_library(header INTERFACE
+        )
+# TODO: change template word to project name and delete this comment
+add_library(template STATIC
+        # enum your files and delete this comment
+        ${CMAKE_CURRENT_SOURCE_DIR}/sources/source.cpp
+        )
+add_executable(tests
+        # TODO: enum your files and delete this comment
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp
+        )
 
+# TODO: change template word to project name and delete this comment
+target_include_directories(template
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+        )
+target_include_directories(tests
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+        )
+# TODO: change template word to project name and delete this comment
 target_link_libraries(tests GTest::main template)
 
 target_include_directories(
-  ${PROJECT_NAME}
-  PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+        header
+        INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+        
 
 enable_testing()
 add_test(NAME unit_tests COMMAND tests)
