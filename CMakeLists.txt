@@ -65,7 +65,6 @@ if(BUILD_COVERAGE)
   find_package(codecov)
   # TODO: change template word to project name and delete this comment
   add_coverage(template)
-  add_coverage(tests)
   list(APPEND LCOV_REMOVE_PATTERNS "'${PROJECT_SOURCE_DIR}/tests/*'")
   coverage_evaluate()
 endif()
