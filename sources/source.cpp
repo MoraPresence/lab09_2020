@@ -60,8 +60,12 @@ void crawler::downloader(std::list<std::string> *currentList,
             _mutex.unlock();
             continue;
         }
-        tmp->push_back(getHTML(currentList->front()));
+        std::string link = currentList->front();
         currentList->pop_front();
+        _mutex.unlock();
+        std::string buf = getHTML(link);
+        _mutex.lock();
+        tmp->push_back(buf);
         _mutex.unlock();
     }
 }
@@ -170,6 +174,7 @@ std::list<std::string> *linksList) {
         }
         std::string buf = listBuf->front();
         listBuf->pop_front();
+        _mutex.unlock();
         GumboOutput *output = gumbo_parse(buf.c_str());
 
         std::queue<GumboNode *> qn;
@@ -183,14 +188,20 @@ std::list<std::string> *linksList) {
                 if (node->v.element.tag == GUMBO_TAG_A &&
                     (href = gumbo_get_attribute
                     (&node->v.element.attributes, "href"))) {
-                    if (std::string(href->value).find("http") == 0)
+                    if (std::string(href->value).find("http") == 0){
+                        _mutex.lock();
                         linksList->push_back(href->value);
+                        _mutex.unlock();
+                    }
                 }
                 if (node->v.element.tag == GUMBO_TAG_IMG &&
                     (href = gumbo_get_attribute
                     (&node->v.element.attributes, "src"))) {
-                    if (std::string(href->value).find("http") == 0)
+                    if (std::string(href->value).find("http") == 0){
+                        _mutex.lock();
                         _arrayList.push_back(href->value);
+                        _mutex.unlock();
+                    }
                 }
 
                 GumboVector *children = &node->v.element.children;
@@ -200,7 +211,6 @@ std::list<std::string> *linksList) {
             }
         }
         gumbo_destroy_output(&kGumboDefaultOptions, output);
-        _mutex.unlock();
     }
 }
 
